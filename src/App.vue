@@ -58,6 +58,7 @@
               class="form-control"
               v-model.number="userData.contact"
               required
+              pattern="[03][0-9]*"
             />
           </div>
         </div>
@@ -92,16 +93,30 @@
     <table id="firstTable" class="table table-dark mt-5">
       <thead>
         <tr>
-          <th>Full Name</th>
-          <th>Email</th>
-          <th>Phone</th>
-          <th>City</th>
-          <th>Blood Group</th>
-          <th>Actions</th>
+          <th class="box" @contextmenu="onContextMenu($event, 'fullName')">
+            Full Name
+          </th>
+          <th class="box" @contextmenu="onContextMenu($event, 'email')">
+            E-mail
+          </th>
+          <th class="box" @contextmenu="onContextMenu($event, 'contact')">
+            Phone
+          </th>
+          <th class="box" @contextmenu="onContextMenu($event, 'city')">
+            City
+          </th>
+          <th @contextmenu="$event.preventDefault()">
+            Blood Group
+          </th>
+          <th @contextmenu="$event.preventDefault()">Actions</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(row, index) in Profiles" v-bind:key="row">
+        <tr
+          v-for="(row, index) in Profiles"
+          v-bind:key="row"
+          @contextmenu="modifyOptions($event, index, row)"
+        >
           <td>{{ row.fullName }}</td>
           <td>{{ row.email }}</td>
           <td>{{ row.contact }}</td>
@@ -152,6 +167,7 @@
 </template>
 
 <script>
+import _ from "lodash";
 export default {
   data() {
     return {
@@ -177,23 +193,136 @@ export default {
       }
     }
   },
+  components: {},
   methods: {
+    modifyOptions(e, index, row) {
+      //console.log("The modifier was called", e, index);
+      e.preventDefault();
+      this.$contextmenu({
+        x: e.x,
+        y: e.y,
+        items: [
+          {
+            label: "Edit",
+            onClick: () => {
+              this.EditRecord(row, index);
+            },
+          },
+          {
+            label: "Delete",
+            onClick: () => {
+              this.deleteRec(index);
+            },
+          },
+        ],
+      });
+    },
+
+    onContextMenu(e, id) {
+      //prevent the browser's default menu
+      e.preventDefault();
+      //shou our menu
+      this.$contextmenu({
+        x: e.x,
+        y: e.y,
+        items: [
+          {
+            label: "Sort Ascending",
+            onClick: () => {
+              switch (id) {
+                case "fullName":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["fullName"],
+                    ["asc"]
+                  );
+                  break;
+                case "email":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["fullName"],
+                    ["asc"]
+                  );
+                  break;
+                case "city":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["fullName"],
+                    ["asc"]
+                  );
+                  break;
+                case "contact":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["contact"],
+                    ["asc"]
+                  );
+                  break;
+              }
+            },
+          },
+          {
+            label: "Sort Descending",
+            onClick: () => {
+              switch (id) {
+                case "fullName":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["fullName"],
+                    ["desc"]
+                  );
+                  break;
+                case "email":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["fullName"],
+                    ["desc"]
+                  );
+                  break;
+                case "city":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["fullName"],
+                    ["desc"]
+                  );
+                  break;
+                case "contact":
+                  this.Profiles = _.orderBy(
+                    JSON.parse(JSON.stringify(this.Profiles)),
+                    ["contact"],
+                    ["desc"]
+                  );
+                  break;
+              }
+            },
+          },
+        ],
+      });
+    },
     onsubmit() {
       const record = JSON.parse(JSON.stringify(this.userData));
-      console.log(record);
-      const toAdd = {
-        fullName: this.userData.fullName,
-        email: this.userData.email,
-        city: this.userData.city,
-        contact: this.userData.contact,
-        bloodGroup: this.selectedbg,
-      };
+      // console.log(record);
+      var found = this.Profiles.find(
+        (element) => element.email == record.email
+      );
+      if (!found) {
+        const toAdd = {
+          fullName: this.userData.fullName,
+          email: this.userData.email,
+          city: this.userData.city,
+          contact: this.userData.contact,
+          bloodGroup: this.selectedbg,
+        };
 
-      this.Profiles.push(toAdd);
-      console.log(JSON.parse(JSON.stringify(this.Profiles)));
+        this.Profiles.push(toAdd);
+        console.log(JSON.parse(JSON.stringify(this.Profiles)));
 
-      localStorage.setItem("Profiles", JSON.stringify(this.Profiles));
-      // console.log(this.Profiles);
+        localStorage.setItem("Profiles", JSON.stringify(this.Profiles));
+        found = false;
+        // console.log(this.Profiles);
+      } else {
+        alert("The Email Already is in the dataBase! Please Retry!");
+      }
     },
     deleteRec(id) {
       this.Profiles.splice(id, 1);
@@ -212,12 +341,19 @@ export default {
       this.selectedbg = row.bloodGroup;
     },
     makeEdit() {
-      this.Profiles[this.indextoEdit].fullName = this.userData.fullName;
-      this.Profiles[this.indextoEdit].email = this.userData.email;
-      this.Profiles[this.indextoEdit].city = this.userData.city;
-      this.Profiles[this.indextoEdit].contact = this.userData.contact;
-      this.Profiles[this.indextoEdit].bloodGroup = this.selectedbg;
-      localStorage.setItem("Profiles", JSON.stringify(this.Profiles));
+      var found = this.Profiles.find(
+        (element) => element.email == this.userData.email
+      );
+      if (!found) {
+        this.Profiles[this.indextoEdit].email = this.userData.email;
+        this.Profiles[this.indextoEdit].fullName = this.userData.fullName;
+        this.Profiles[this.indextoEdit].city = this.userData.city;
+        this.Profiles[this.indextoEdit].contact = this.userData.contact;
+        this.Profiles[this.indextoEdit].bloodGroup = this.selectedbg;
+        localStorage.setItem("Profiles", JSON.stringify(this.Profiles));
+      } else {
+        alert("This email is Already in the List, Please re-write the email!");
+      }
 
       //resetting The forms and turning back the function to add profile again
       this.isEdit = false;
